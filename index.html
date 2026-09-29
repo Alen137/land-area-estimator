@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Land Area Estimator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f1f3f6;font:14px Arial;color:#182230}header{background:#172b4d;color:#fff;padding:14px;text-align:center}header h1{margin:0;font-size:20px}header p{margin:5px 0 0;font-size:12px;opacity:.8}.app{max-width:1200px;margin:auto;padding:12px}.grid{display:grid;grid-template-columns:1fr 330px;gap:12px}.card{background:#fff;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 2px 8px #0001}canvas{width:100%;height:620px;display:block;background:#fafafa;background-image:linear-gradient(#00000008 1px,transparent 1px),linear-gradient(90deg,#00000008 1px,transparent 1px);background-size:25px 25px;border:1px solid #ccd3dc;border-radius:7px;touch-action:none}.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}button,select{border:1px solid #ccd3dc;border-radius:6px;padding:8px 10px;font-weight:600;cursor:pointer;background:#fff}button{border:0}.p{background:#1677ff;color:#fff}.s{background:#e7ebf0}.d{background:#dc3545;color:#fff}.calcbtn{width:100%;background:#16a34a;color:#fff;font-size:15px;padding:11px;margin-top:12px}.i{background:#eef6ff;border-left:3px solid #1677ff;padding:8px;font-size:12px;line-height:1.45;margin-bottom:8px}.status{padding:8px;border-radius:6px;background:#f5f6f8;font-size:12px;margin-top:8px}.ok{background:#e9f8ef;color:#166534}.err{background:#fdecec;color:#991b1b}h2{font-size:16px;margin:0 0 10px}h3{font-size:13px;margin:0 0 7px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:7px;border-bottom:1px solid #e7eaee;text-align:left}input{width:100%;padding:7px;border:1px solid #ccd3dc;border-radius:5px}.result{background:#172b4d;color:#fff;border-radius:8px;padding:13px;text-align:center;margin-bottom:8px}.big{font-size:25px;font-weight:bold}.conv{display:grid;grid-template-columns:1fr auto;padding:7px 0;border-bottom:1px solid #eee}.muted{font-size:11px;color:#697386}.settings{display:grid;grid-template-columns:1fr 1fr;gap:10px}.settings label{font-size:12px;font-weight:bold}.settings select{width:100%;margin-top:4px}.box{border:1px solid #ddd;border-radius:7px;padding:9px;margin-bottom:8px}.rel td,.rel th{text-align:center}.rel th{background:#f5f6f8}.split{font-size:11px;color:#697386;margin-top:3px}@media(max-width:850px){.grid{grid-template-columns:1fr}canvas{height:470px}}
+</style>
+</head>
+<body>
+<header><h1>Land Area Estimator</h1></header>
+
+<div class="app">
+<div class="card">
+<div class="settings">
+<label>Input Measurement Unit<select id="unit">
+<option value="mm">Millimetre (mm)</option>
+<option value="cm">Centimetre (cm)</option>
+<option value="m">Metre (m)</option>
+<option value="ft">Feet (ft)</option>
+<option value="ftin" selected>Feet.Inch (45.5 = 45' 5")</option>
+</select></label>
+<label>Map Scale<select id="scale">
+<option value="1">1 : 1</option>
+<option value="500" selected>1 : 500</option>
+</select></label>
+</div>
+</div>
+
+<div class="grid"><div>
+
+<div class="card">
+<div class="toolbar">
+<button class="p" id="new">New</button>
+<button class="s" id="undo">Undo</button>
+<button class="s" id="edit">Edit Corners</button>
+<button class="s" id="diag">Add Diagonal</button>
+<button class="d" id="clear">Clear</button>
+</div>
+<div class="i">Draw the complete land boundary. Click the first corner to close it. Then use Add Diagonal to divide the plot into triangles. Enter all measurements from the नक्शा using the selected unit.</div>
+<canvas id="c"></canvas>
+<div class="status" id="status">Start drawing the land boundary.</div>
+</div>
+
+<div class="card">
+<h2>Plot Side Measurements</h2>
+<div id="sides">Draw and close the boundary first.</div>
+</div>
+
+<div class="card">
+<h2>Diagonal Measurements</h2>
+<div id="diagonals">No diagonals added.</div>
+</div>
+
+<div class="card">
+<h2>Triangles</h2>
+<div id="triangles">Close the boundary to see the triangles.</div>
+<button class="calcbtn" id="calculate">Calculate Actual Land Area</button>
+</div>
+
+</div><div>
+
+<div class="card">
+<h2>Actual Land Area</h2>
+<div class="result">
+<div class="muted" style="color:#fff">AANA – PAISA – DAAM</div>
+<div class="big" id="apd">—</div>
+</div>
+<div class="conv"><span>Square metres</span><b id="m2">—</b></div>
+<div class="conv"><span>Square feet</span><b id="ft2">—</b></div>
+</div>
+
+<div class="card">
+<h2>Land Unit Relationships</h2>
+<table class="rel">
+<tr><th>Unit</th><th>Aana</th><th>Paisa</th><th>Daam</th><th>m²</th><th>ft²</th></tr>
+<tr><td>1 Aana</td><td>1</td><td>4</td><td>16</td><td>31.7968</td><td>342.25</td></tr>
+<tr><td>1 Paisa</td><td>¼</td><td>1</td><td>4</td><td>7.9492</td><td>85.5625</td></tr>
+<tr><td>1 Daam</td><td>1/16</td><td>¼</td><td>1</td><td>1.9873</td><td>21.390625</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>Calculation</h2>
+<div class="status" id="calc">Enter all measurements and press Calculate.</div>
+<div class="split">1 Aana = 4 Paisa = 16 Daam</div>
+</div>
+
+</div></div></div>
+
+<script>
+const c=document.getElementById("c"),x=c.getContext("2d"),$=id=>document.getElementById(id);
+let P=[],D=[],mode="draw",preview=null,drag=-1,ds=null,closed=false;
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),E=(a,b)=>a<b?a+"-"+b:b+"-"+a,name=i=>String.fromCharCode(65+i);
+
+function resize(){let r=c.getBoundingClientRect(),q=devicePixelRatio||1;c.width=r.width*q;c.height=r.height*q;x.setTransform(q,0,0,q,0,0);draw()}
+function pos(e){let r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function msg(t,cl=""){$("status").textContent=t;$("status").className="status "+cl}
+function hasEdge(a,b){return(a+1)%P.length===b||(b+1)%P.length===a||D.some(q=>E(q[0],q[1])===E(a,b))}
+function diagonalExists(a,b){return D.some(q=>E(q[0],q[1])===E(a,b))}
+
+function draw(){
+ let r=c.getBoundingClientRect();x.clearRect(0,0,r.width,r.height);
+ if(P.length){
+  x.beginPath();x.moveTo(P[0].x,P[0].y);P.slice(1).forEach(q=>x.lineTo(q.x,q.y));
+  if(closed)x.closePath();
+  if(closed){x.fillStyle="#1677ff18";x.fill()}
+  x.strokeStyle="#1677ff";x.lineWidth=3;x.stroke()
+ }
+ D.forEach(q=>{
+  x.beginPath();x.moveTo(P[q[0]].x,P[q[0]].y);x.lineTo(P[q[1]].x,P[q[1]].y);
+  x.strokeStyle="#f59e0b";x.lineWidth=2;x.setLineDash([7,5]);x.stroke();x.setLineDash([])
+ });
+ if(mode==="draw"&&P.length&&preview){
+  x.beginPath();x.moveTo(P.at(-1).x,P.at(-1).y);x.lineTo(preview.x,preview.y);
+  x.strokeStyle="#555";x.lineWidth=2;x.setLineDash([7,5]);x.stroke();x.setLineDash([])
+ }
+ P.forEach((q,i)=>{
+  x.beginPath();x.arc(q.x,q.y,9,0,7);x.fillStyle=i===0?"#16a34a":"#fff";x.fill();
+  x.strokeStyle="#1677ff";x.lineWidth=3;x.stroke();
+  x.fillStyle="#17202a";x.font="bold 12px Arial";x.fillText(name(i),q.x+11,q.y-9)
+ })
+}
+
+c.addEventListener("pointerdown",e=>{
+ e.preventDefault();let q=pos(e),i=P.findIndex(v=>dist(v,q)<18);
+
+ if(mode==="draw"){
+  if(!P.length){P=[q];preview=q;draw();msg("First corner placed.","ok");return}
+  if(P.length>=3&&dist(P[0],q)<20){
+   closed=true;mode="edit";preview=null;msg("Boundary closed. Add diagonals if needed.","ok");draw();update();return
+  }
+  P.push(q);preview=q;draw();return
+ }
+
+ if(mode==="edit"&&closed){drag=i;if(drag>=0)c.setPointerCapture(e.pointerId);return}
+
+ if(mode==="diag"&&closed&&i>=0){
+  if(ds===null){ds=i;msg("Select the second corner for the diagonal.","ok");return}
+  if(i!==ds&&!hasEdge(ds,i)&&!diagonalExists(ds,i)){
+   D.push([ds,i]);ds=null;mode="edit";msg("Diagonal added. Enter its measurement below.","ok");draw();update()
+  }else{ds=null;msg("That line already exists or is a boundary side.","err")}
+ }
+});
+
+c.addEventListener("pointermove",e=>{
+ let q=pos(e);
+ if(drag>=0){P[drag]=q;draw();return}
+ if(mode==="draw"){preview=q;draw()}
+});
+c.addEventListener("pointerup",()=>drag=-1);
+
+$("new").onclick=()=>{
+ P=[];D=[];closed=false;mode="draw";preview=null;drag=-1;ds=null;
+ clearResults();update();msg("Start drawing the land boundary.")
+};
+$("clear").onclick=$("new").onclick;
+$("undo").onclick=()=>{
+ if(!closed&&P.length){P.pop();preview=P.at(-1);draw()}
+ else if(D.length){D.pop();clearResults();update();draw()}
+};
+$("edit").onclick=()=>{
+ if(closed){mode="edit";ds=null;msg("Drag any corner to adjust the boundary.","ok")}
+};
+$("diag").onclick=()=>{
+ if(closed){mode="diag";ds=null;msg("Click two existing corners to add a diagonal.","ok")}
+};
+$("calculate").onclick=calculate;
+$("unit").onchange=()=>{sideInputs();diagonalInputs()};
+$("scale").onchange=clearResults;
+
+function update(){
+ sideInputs();diagonalInputs();
+ if(!closed){$("triangles").textContent="Close the boundary to see the triangles.";return}
+ let T=getTriangles();
+ if(!T.length){$("triangles").textContent="No triangles detected. Add diagonals to divide the plot.";return}
+ $("triangles").innerHTML=T.map((t,i)=>`<div class="box"><h3>Triangle ${i+1}: ${t.map(name).join(" – ")}</h3><div class="muted">Uses ${E(t[0],t[1]).split("-").map(name).join("")}, ${E(t[1],t[2]).split("-").map(name).join("")}, ${E(t[2],t[0]).split("-").map(name).join("")}</div></div>`).join("")
+}
+
+function sideInputs(){
+ if(!closed){$("sides").textContent="Draw and close the boundary first.";return}
+ let u=$("unit").value,h="<table><tr><th>Side</th><th>Measurement ("+unitName(u)+")</th></tr>";
+ for(let i=0;i<P.length;i++){let j=(i+1)%P.length;h+=`<tr><td>${name(i)}${name(j)}</td><td><input type="text" inputmode="decimal" data-edge="${E(i,j)}" placeholder="${placeholder(u)}"></td></tr>`}
+ $("sides").innerHTML=h+"</table>"
+}
+
+function diagonalInputs(){
+ if(!D.length){$("diagonals").textContent="No diagonals added.";return}
+ let u=$("unit").value,h="<table><tr><th>Diagonal</th><th>Measurement ("+unitName(u)+")</th></tr>";
+ D.forEach(q=>h+=`<tr><td>${name(q[0])}${name(q[1])}</td><td><input type="text" inputmode="decimal" data-edge="${E(q[0],q[1])}" placeholder="${placeholder(u)}"></td></tr>`);
+ $("diagonals").innerHTML=h+"</table>"
+}
+
+function unitName(u){return u==="ftin"?"feet.inch":u}
+function placeholder(u){return u==="ftin"?"45.5":u}
+
+function getTriangles(){
+ let n=P.length,adj=Array.from({length:n},()=>[]);
+ for(let i=0;i<n;i++){let j=(i+1)%n;adj[i].push(j);adj[j].push(i)}
+ D.forEach(q=>{adj[q[0]].push(q[1]);adj[q[1]].push(q[0])});
+ let out=[];
+ for(let a=0;a<n;a++)for(let b of adj[a])if(b>a)for(let z of adj[b])if(z>b&&adj[a].includes(z))out.push([a,b,z]);
+ return out
+}
+
+function parseFeetInch(v){
+ v=String(v).trim().replace("'","").replace('"',"");
+ if(!v)return NaN;
+ let a=v.split(".");
+ if(a.length===1)return Number(a[0]);
+ let ft=Number(a[0]),inch=Number(a[1]);
+ if(!Number.isFinite(ft)||!Number.isFinite(inch)||inch>=12)return NaN;
+ return ft+inch/12
+}
+
+function val(a,b){
+ let z=document.querySelector(`[data-edge="${E(a,b)}"]`);
+ if(!z||!z.value)return 0;
+ return parseInput(z.value)
+}
+
+function parseInput(v){
+ let u=$("unit").value;
+ if(u==="ftin")return parseFeetInch(v);
+ return Number(String(v).replace(/,/g,""))
+}
+
+function toMeters(v){
+ let u=$("unit").value,s=Number($("scale").value);
+ if(u==="mm")return v/1000*s;
+ if(u==="cm")return v/100*s;
+ if(u==="m")return v*s;
+ if(u==="ft")return v*.3048*s;
+ return v*.3048*s
+}
+
+function heron(a,b,c){
+ let s=(a+b+c)/2,v=s*(s-a)*(s-b)*(s-c);
+ return v>0?Math.sqrt(v):0
+}
+
+function calculate(){
+ if(!closed)return error("Draw and close the plot first.");
+ let T=getTriangles();
+ if(!T.length)return error("Add diagonals so the plot is divided into triangles.");
+
+ for(let i=0;i<P.length;i++){
+  let j=(i+1)%P.length,v=val(i,j);
+  if(!Number.isFinite(v)||v<=0)return error(`Enter a valid measurement for side ${name(i)}${name(j)}.`)
+ }
+
+ for(let q of D){
+  let v=val(q[0],q[1]);
+  if(!Number.isFinite(v)||v<=0)return error(`Enter a valid measurement for diagonal ${name(q[0])}${name(q[1])}.`)
+ }
+
+ let area=0;
+ for(let i=0;i<T.length;i++){
+  let t=T[i],s=[val(t[0],t[1]),val(t[1],t[2]),val(t[2],t[0])].map(toMeters),a=heron(...s);
+  if(!a)return error(`The measurements for Triangle ${i+1} cannot form a valid triangle.`);
+  area+=a
+ }
+
+ let ft=area*10.7639104167,totalDaam=ft/21.390625;
+ let a=Math.floor(totalDaam/16),rem=totalDaam-a*16,p=Math.floor(rem/4),d=rem-p*4;
+
+ $("apd").textContent=`${a}-${p}-${fmt(d,2)}`;
+ $("m2").textContent=fmt(area,4);
+ $("ft2").textContent=fmt(ft,2);
+ $("calc").textContent=`Actual land area calculated from ${T.length} triangle${T.length===1?"":"s"}.`;
+ $("calc").className="status ok"
+}
+
+function error(t){$("calc").textContent=t;$("calc").className="status err"}
+function fmt(n,d){return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d})}
+function clearResults(){
+ ["m2","ft2","apd"].forEach(i=>$(i).textContent="—");
+ $("calc").textContent="Enter the measurements and press Calculate.";
+ $("calc").className="status"
+}
+
+resize();window.addEventListener("resize",resize);update();
+</script>
+</body>
+</html>
